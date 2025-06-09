@@ -27,7 +27,6 @@ classifiers = [
 dependencies = [
   "langgraph",
   "langchain[openai]",
-  "langgraph-cli[inmem]",
   "pydantic",
   "python-dotenv",
   "langchain-tavily",
@@ -45,6 +44,7 @@ path = "src/chatbot/__about__.py"
 [tool.hatch.envs.dev]
 dependencies = [
   "langgraph-cli[inmem]",
+  "langgraph-sdk",
   "ruff",
   "mypy>=1.0.0",
   "black",

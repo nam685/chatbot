@@ -17,7 +17,7 @@ def handle_human_review(event: dict, config: RunnableConfig):
     if action_input not in ["feedback", "continue"]:
         raise RuntimeError("Invalid action. Please enter 'feedback', or 'continue'.")
     data_input = input("Human Review - Data (optional): ")
-    command = Command(
+    command: Command = Command(
         resume={
             "action": action_input,
             "data": data_input if data_input else None,
@@ -26,9 +26,9 @@ def handle_human_review(event: dict, config: RunnableConfig):
     stream_graph_updates(command, config)
 
 
-def stream_graph_updates(user_input: dict | Command, config: RunnableConfig):
+def stream_graph_updates(graph_input: dict | Command, config: RunnableConfig):
     events = graph.stream(
-        user_input,
+        graph_input,
         config,
         stream_mode="values",
     )
@@ -49,5 +49,5 @@ if __name__ == "__main__":
         if user_input.lower() in ["quit", "exit", "q"]:
             print("Goodbye!")
             break
-        user_input = {"messages": [{"role": "user", "content": user_input}]}
-        stream_graph_updates(user_input, config)
+        graph_input = {"messages": [{"role": "user", "content": user_input}]}
+        stream_graph_updates(graph_input, config)

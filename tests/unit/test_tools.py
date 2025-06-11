@@ -1,7 +1,4 @@
-import pytest
-from pydantic import ValidationError
-
-from chatbot.utils.tools import multiply
+from chatbot.utils.tools.multiply import multiply
 
 
 def test_multiply_function():

@@ -1,13 +1,14 @@
 from typing import Literal
 
 from dotenv import load_dotenv
+from langchain_core.messages import AIMessage
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 
-from chatbot.utils.nodes import (
+from chatbot.utils.nodes.human_review import human_review_node
+from chatbot.utils.nodes.llm import (
     chatbot,
     classify_sensitivity,
-    human_review_node,
     tool_node,
 )
 from chatbot.utils.state import State
@@ -16,9 +17,12 @@ load_dotenv()
 
 
 def route_after_chatbot(state: State) -> Literal[END, "human_review", "tools"]:  # type: ignore
-    if len(state.messages[-1].tool_calls) == 0:
+    ai_message = state["messages"][-1]
+    if not isinstance(ai_message, AIMessage):
+        raise ValueError("The last message must be an AIMessage.")
+    if len(ai_message.tool_calls) == 0:
         return END
-    elif state.sensitive:
+    elif state["sensitive"]:
         return "human_review"
     else:
         return "tools"
@@ -39,7 +43,7 @@ graph_builder.add_conditional_edges(
 graph_builder.add_edge("tools", "chatbot")
 
 memory = MemorySaver()
-graph = graph_builder.compile(checkpointer=memory)
-# graph = graph_builder.compile()
+# graph = graph_builder.compile(checkpointer=memory)
+graph = graph_builder.compile()
 
 graph.get_graph().print_ascii()

@@ -2,7 +2,7 @@ name: CI workflow
 
 on:
   push:
-    branches: [ main ]
+    branches: [ "!main" ]
   pull_request:
     branches: [ main ]
 
@@ -11,9 +11,7 @@ permissions:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python 3.12
@@ -27,6 +25,14 @@ jobs:
     - name: Install dependencies
       run: |
         hatch env create dev
+    - name: Check version change
+      run: |
+        git fetch origin main
+        diff_version=$(git diff origin/main src/chatbot/__about__.py | grep -E '^\+__version__')
+        if [ -z "$diff_version" ]; then
+          echo "Version must be updated in src/chatbot/__about__.py"
+          exit 1
+        fi
     - name: Lint
       run: |
         hatch run dev:lint

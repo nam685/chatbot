@@ -29,10 +29,12 @@ Prepared for deployment as standalone container via LangGraph Platform
 
 ## Installation
 
+PyPI package: https://pypi.org/project/chatbot_nam685/
+
 ```console
-pip install chatbot
+pip install chatbot_nam685
 ```
 
 ## License
 
-`chatbot` is distributed under the terms of the [MIT](https://spdx.org/licenses/MIT.html) license.
+`chatbot_nam685` is distributed under the terms of the [MIT](https://spdx.org/licenses/MIT.html) license.

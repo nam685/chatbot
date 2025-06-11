@@ -3,7 +3,7 @@ from pprint import pprint
 from langchain_core.runnables.config import RunnableConfig
 from langgraph.types import Command
 
-from .graph import graph
+from .src.chatbot.graph import graph
 
 
 def handle_human_review(event: dict, config: RunnableConfig):

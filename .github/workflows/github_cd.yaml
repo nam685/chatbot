@@ -35,7 +35,7 @@ jobs:
     permissions:
       id-token: write
     environment:
-      name: pypi
+      name: release
       url: https://pypi.org/p/chatbot_nam685/
     steps:
       - name: Retrieve release distributions

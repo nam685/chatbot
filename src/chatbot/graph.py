@@ -43,7 +43,7 @@ graph_builder.add_conditional_edges(
 graph_builder.add_edge("tools", "chatbot")
 
 memory = MemorySaver()
-# graph = graph_builder.compile(checkpointer=memory)
+# graph = graph_builder.compile(checkpointer=memory)  # In memory saver should not be used when deployed using LangGraph
 graph = graph_builder.compile()
 
 graph.get_graph().print_ascii()

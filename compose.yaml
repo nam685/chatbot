@@ -39,3 +39,7 @@ services:
     environment:
       REDIS_URI: redis://langgraph-redis:6379
       POSTGRES_URI: postgres://postgres:postgres@langgraph-postgres:5432/postgres?sslmode=disable
+  api:
+    image: chatbot-api:latest
+    ports:
+      - "8080:8080"

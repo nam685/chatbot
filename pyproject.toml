@@ -30,7 +30,9 @@ dependencies = [
   "pydantic",
   "python-dotenv",
   "langchain-tavily",
-  "grandalf"
+  "grandalf",
+  "fastapi[standard]",
+  "uvicorn[standard]",
 ]
 
 [project.urls]
@@ -66,7 +68,7 @@ lint.ignore = ["E501"]
 exclude = ["__pycache__", "build", "dist", ".venv"]
 
 [tool.coverage.run]
-source_pkgs = ["chatbot", "tests"]
+source_pkgs = ["chatbot", "tests", "api"]
 branch = true
 parallel = true
 omit = [
@@ -76,6 +78,7 @@ omit = [
 [tool.coverage.paths]
 chatbot = ["src/chatbot", "*/chatbot/src/chatbot"]
 tests = ["tests", "*/chatbot/tests"]
+api = ["api", "*/chatbot/api"]
 
 [tool.coverage.report]
 exclude_lines = [

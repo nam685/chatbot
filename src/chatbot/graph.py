@@ -2,7 +2,6 @@ from typing import Literal
 
 from dotenv import load_dotenv
 from langchain_core.messages import AIMessage
-from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 
 from chatbot.utils.nodes.human_review import human_review_node
@@ -42,8 +41,6 @@ graph_builder.add_conditional_edges(
 )
 graph_builder.add_edge("tools", "chatbot")
 
-memory = MemorySaver()
-# graph = graph_builder.compile(checkpointer=memory)  # In memory saver should not be used when deployed using LangGraph
 graph = graph_builder.compile()
 
 graph.get_graph().print_ascii()

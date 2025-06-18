@@ -1,42 +1,39 @@
-"use client";
+'use client';
 
 import { v4 as uuidv4 } from 'uuid';
-import { useState } from "react";
-import ThreadList from "./components/ThreadList";
-import MessageInput from "./components/MessageInput";
-import HumanReviewForm from "./components/HumanReviewForm";
-import ResponseDisplay from "./components/ResponseDisplay";
-import { fetchThreads, deleteThread, sendMessage, sendHumanReview } from "./utils/chat";
-
-
-export class Thread {
-  constructor(
-    public thread_id: string,
-    public status: string
-  ) { }
-}
-
-export class HumanReview {
-  constructor(public action: string, public data: string) { }
-}
+import { useState } from 'react';
+import ThreadList from './components/ThreadList';
+import MessageInput from './components/MessageInput';
+import HumanReviewForm from './components/HumanReviewForm';
+import ResponseDisplay from './components/ResponseDisplay';
+import {
+  fetchThreads,
+  deleteThread,
+  sendMessage,
+  sendHumanReview,
+} from './utils/chat';
+import { Thread, HumanReview } from './models';
 
 export default function Home() {
   const [threads, setThreads] = useState<Thread[]>([]);
   const [selectedThread, setSelectedThread] = useState<Thread | null>(null);
-  const [message, setMessage] = useState<string>("");
-  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [message, setMessage] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [humanReview, setHumanReview] = useState<HumanReview>(
-    new HumanReview("continue", "")
+    new HumanReview('continue', '')
   );
-  const [response, setResponse] = useState<string>("");
+  const [response, setResponse] = useState<string>('');
 
   const handleFetchThreads = async () => {
     try {
       const data = await fetchThreads();
-      const threads = data.map((thread: { thread_id: string; status: string }) => new Thread(thread.thread_id, thread.status));
+      const threads = data.map(
+        (thread: { thread_id: string; status: string }) =>
+          new Thread(thread.thread_id, thread.status)
+      );
       setThreads(threads);
     } catch (error) {
-      console.error("Error fetching thread IDs:", error);
+      console.error('Error fetching thread IDs:', error);
     }
   };
 
@@ -44,14 +41,17 @@ export default function Home() {
     try {
       await deleteThread(threadId);
       setThreads((prevThreads) =>
-        prevThreads.filter((thread: { thread_id: string; status: string }) => thread.thread_id !== threadId)
+        prevThreads.filter(
+          (thread: { thread_id: string; status: string }) =>
+            thread.thread_id !== threadId
+        )
       );
       if (selectedThread?.thread_id === threadId) {
         setSelectedThread(null);
-        setResponse("");
+        setResponse('');
       }
     } catch (error) {
-      console.error("Error deleting thread:", error);
+      console.error('Error deleting thread:', error);
     }
   };
 
@@ -59,40 +59,41 @@ export default function Home() {
     resData: { type: string; data: string },
     oldThread: Thread
   ) => {
-    const thread = new Thread(oldThread.thread_id, resData["type"] === "interrupt" ? "interrupted" : "idle");
+    const thread = new Thread(
+      oldThread.thread_id,
+      resData['type'] === 'interrupt' ? 'interrupted' : 'idle'
+    );
     setSelectedThread(thread);
     setThreads((prevThreads) =>
-      prevThreads.map((t) =>
-        t.thread_id === oldThread.thread_id ? thread : t
-      )
+      prevThreads.map((t) => (t.thread_id === oldThread.thread_id ? thread : t))
     );
-    if (resData["type"] === "interrupt") {
-      setResponse("");
-      setSearchQuery(resData["data"]);
-    } else if (resData["type"] === "message") {
-      setResponse(resData["data"]);
-      setSearchQuery("");
+    if (resData['type'] === 'interrupt') {
+      setResponse('');
+      setSearchQuery(resData['data']);
+    } else if (resData['type'] === 'message') {
+      setResponse(resData['data']);
+      setSearchQuery('');
     } else {
-      throw new Error("Unexpected response type");
+      throw new Error('Unexpected response type');
     }
   };
 
   const handleSendMessage = async () => {
     if (!selectedThread || !message) {
-      alert("Please select a thread and enter a message.");
+      alert('Please select a thread and enter a message.');
       return;
     }
     try {
       const resData = await sendMessage(selectedThread.thread_id, message);
       await updateThreadStatusAndResponse(resData, selectedThread);
     } catch (error) {
-      console.error("Error sending message:", error);
+      console.error('Error sending message:', error);
     }
   };
 
   const handleSendHumanReview = async () => {
     if (!selectedThread || !humanReview) {
-      alert("Please select a thread and specify an action.");
+      alert('Please select a thread and specify an action.');
       return;
     }
     try {
@@ -102,7 +103,7 @@ export default function Home() {
       );
       await updateThreadStatusAndResponse(resData, selectedThread);
     } catch (error) {
-      console.error("Error sending human review:", error);
+      console.error('Error sending human review:', error);
     }
   };
 
@@ -114,18 +115,15 @@ export default function Home() {
           onClick={handleFetchThreads}
           className="px-4 py-2 bg-green-500 text-white rounded"
         >
-          List Conversations
+          List Threads
         </button>
         <button
           onClick={() =>
-            setThreads((prev) => [
-              ...prev,
-              new Thread(uuidv4(), "idle"),
-            ])
+            setThreads((prev) => [...prev, new Thread(uuidv4(), 'idle')])
           }
           className="px-4 py-2 bg-green-500 text-white rounded"
         >
-          New Conversation
+          New Thread
         </button>
       </div>
       <ThreadList
@@ -136,7 +134,7 @@ export default function Home() {
       />
       {selectedThread && (
         <>
-          {selectedThread.status === "interrupted" ? (
+          {selectedThread.status === 'interrupted' ? (
             <HumanReviewForm
               searchQuery={searchQuery}
               humanReview={humanReview}

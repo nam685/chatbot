@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  build:
+  build-test-chatbot:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -45,3 +45,28 @@ jobs:
     - name: Test
       run: |
         hatch run dev:test
+  build-test-ui:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Node.js 20
+      uses: actions/setup-node@v4
+      with:
+        node-version: "20"
+    - name: Install dependencies
+      run: |
+        npm install --legacy-peer-deps
+      working-directory: ./ui
+    - name: Lint
+      run: |
+        npm run lint
+      working-directory: ./ui
+    - name: Format
+      run: |
+        npm run format
+      working-directory: ./ui
+    - name: Test
+      run: |
+        npm run test_component
+        npm run test_e2e
+      working-directory: ./ui

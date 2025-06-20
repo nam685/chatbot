@@ -37,15 +37,46 @@ services:
     env_file:
       - .env
     environment:
+      CONTAINER_PORT: 8000
       REDIS_URI: redis://langgraph-redis:6379
       POSTGRES_URI: postgres://postgres:postgres@langgraph-postgres:5432/postgres?sslmode=disable
+    healthcheck:
+      test: [ "CMD", "python", "src/chatbot/healthcheck.py" ]
+      interval: 10s
+      timeout: 1s
+      retries: 5
+      start_period: 10s
   api:
     image: chatbot-api:latest
     ports:
       - "8080:8080"
+    environment:
+      CONTAINER_PORT: 8080
+      UI_URL: http://localhost:3000
+      LANGGRAPH_API_URI: http://langgraph-api:8000
+    depends_on:
+      langgraph-api:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "python", "api/healthcheck.py" ]
+      start_period: 3s
+      timeout: 1s
+      retries: 5
+      interval: 5s
   ui:
     image: chatbot-ui:latest
     ports:
       - "3000:3000"
     environment:
-      - HOSTNAME=0.0.0.0
+      HOSTNAME: 0.0.0.0
+      CONTAINER_PORT: 3000
+      API_URL: http://localhost:8080
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:3000/health" ]
+      start_period: 3s
+      timeout: 1s
+      retries: 5
+      interval: 5s

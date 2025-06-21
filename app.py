@@ -1,3 +1,5 @@
+# For usage in terminal
+
 from pprint import pprint
 
 from langchain_core.runnables.config import RunnableConfig

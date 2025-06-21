@@ -1,4 +1,8 @@
+import os
+
 from fastapi.testclient import TestClient
+
+os.environ["LANGGRAPH_API_URI"] = "http://localhost:8000"
 
 from .main import app
 

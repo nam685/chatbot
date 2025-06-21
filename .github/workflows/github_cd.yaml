@@ -1,6 +1,7 @@
-name: Upload Python Package
+name: Continuous Deployment Workflow
 
 on:
+  workflow_dispatch:
   release:
     types: [published]
 
@@ -28,6 +29,7 @@ jobs:
       with:
         name: release-dists
         path: dist/
+
   pypi-publish:
     runs-on: ubuntu-latest
     needs:
@@ -45,3 +47,57 @@ jobs:
           path: dist/
       - name: Publish release distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+        continue-on-error: true
+
+  upload-docker-images:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Build Docker images
+      run: |
+        # Define public ECR repository URL
+        PUBLIC_ECR_URL=public.ecr.aws/e7b5q5z5/nam685
+        # LangGraph API server
+        docker build -t chatbot -f src/chatbot/Dockerfile .
+        docker tag chatbot:latest $PUBLIC_ECR_URL/chatbot:${{ github.sha }}
+        # API
+        docker build -t chatbot-api -f api/Dockerfile .
+        docker tag chatbot-api:latest $PUBLIC_ECR_URL/chatbot-api:${{ github.sha }}
+        # UI
+        docker build -t chatbot-ui -f ui/Dockerfile ./ui
+        docker tag chatbot-ui:latest $PUBLIC_ECR_URL/chatbot-ui:${{ github.sha }}
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4.1.0
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+    - name: Log in to Amazon ECR
+      run: |
+        aws ecr-public get-login-password --region us-east-1 | \
+        docker login --username AWS --password-stdin public.ecr.aws
+    - name: Push Docker images to ECR
+      run: |
+        PUBLIC_ECR_URL=public.ecr.aws/e7b5q5z5/nam685
+        docker push $PUBLIC_ECR_URL/chatbot:${{ github.sha }}
+        docker push $PUBLIC_ECR_URL/chatbot-api:${{ github.sha }}
+        docker push $PUBLIC_ECR_URL/chatbot-ui:${{ github.sha }}
+
+  deploy-ecs-by-cloudformation:
+    runs-on: ubuntu-latest
+    needs:
+      - upload-docker-images
+    steps:
+    - uses: actions/checkout@v4
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4.1.0
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+    - name: Deploy CloudFormation stack
+      uses: aws-actions/aws-cloudformation-github-deploy@v1
+      with:
+        name: chatbot-ecs
+        template: ecs-infrastructure.yaml
+        parameter-overrides: "GitCommitHash=${{ github.sha }}"

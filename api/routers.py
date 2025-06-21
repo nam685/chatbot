@@ -1,3 +1,4 @@
+import os
 from typing import Any
 
 from fastapi import APIRouter
@@ -5,8 +6,13 @@ from langgraph_sdk import get_client
 
 from .models import ChatMessage, HumanReview, Thread
 
+langgraph_api_uri = os.getenv("LANGGRAPH_API_URI")
+if not langgraph_api_uri:
+    raise ValueError("LANGGRAPH_API_URI environment variable is not set")
+print(f"LANGGRAPH_API_URI: {langgraph_api_uri}")
+
 router = APIRouter()
-langgraph_client = get_client(url="http://langgraph-api:8000")
+langgraph_client = get_client(url=langgraph_api_uri)
 
 
 def parse_ai_response(
@@ -32,6 +38,11 @@ def parse_ai_response(
 @router.get("/")
 async def read_main() -> dict:
     return {"msg": "Hello! Welcome to the LangGraph Chat API"}
+
+
+@router.get("/health")
+async def health_check() -> dict:
+    return {"status": "ok"}
 
 
 @router.get("/chat")

@@ -1,4 +1,4 @@
-FROM python:3.12
+FROM python:3.12-alpine
 
 WORKDIR /code
 COPY ./pyproject.toml /code/pyproject.toml

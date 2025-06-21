@@ -1,6 +1,6 @@
 FROM langchain/langgraph-api:3.11-wolfi
 
-
+ENV POSTGRES_URL=postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@$POSTGRES_HOST:$POSTGRES_PORT/$POSTGRES_DB
 
 # -- Adding local package . --
 ADD . /deps/chatbot

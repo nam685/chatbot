@@ -39,7 +39,7 @@ services:
     environment:
       CONTAINER_PORT: 8000
       REDIS_URI: redis://langgraph-redis:6379
-      POSTGRES_URI: postgres://postgres:postgres@langgraph-postgres:5432/postgres?sslmode=disable
+      DATABASE_URI: postgres://postgres:postgres@langgraph-postgres:5432/postgres?sslmode=disable
     healthcheck:
       test: [ "CMD", "python", "src/chatbot/healthcheck.py" ]
       interval: 10s

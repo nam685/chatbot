@@ -16,6 +16,10 @@ Parameters:
     Description: Secret ARN for chatbot application
     Default: 'arn:aws:secretsmanager:eu-central-1:417744795771:secret:chatbot-secrets-TXOVcr'
 
+  GitCommitHash:
+    Type: String
+    Description: 'Git commit hash for Docker images'
+
 Resources:
   # VPC and Networking
   VPC:
@@ -161,23 +165,23 @@ Resources:
         - IpProtocol: tcp
           FromPort: 3000
           ToPort: 3000
-          SourceSecurityGroupId: !Ref ALBSecurityGroup
+          CidrIp: !Ref VpcCidr
         - IpProtocol: tcp
           FromPort: 8080
           ToPort: 8080
-          SourceSecurityGroupId: !Ref ECSSecurityGroup
+          CidrIp: !Ref VpcCidr
         - IpProtocol: tcp
           FromPort: 8000
           ToPort: 8000
-          SourceSecurityGroupId: !Ref ECSSecurityGroup
+          CidrIp: !Ref VpcCidr
         - IpProtocol: tcp
           FromPort: 5432
           ToPort: 5432
-          SourceSecurityGroupId: !Ref ECSSecurityGroup
+          CidrIp: !Ref VpcCidr
         - IpProtocol: tcp
           FromPort: 6379
           ToPort: 6379
-          SourceSecurityGroupId: !Ref ECSSecurityGroup
+          CidrIp: !Ref VpcCidr
       SecurityGroupEgress:
         - IpProtocol: -1
           CidrIp: '0.0.0.0/0'
@@ -186,7 +190,6 @@ Resources:
   EFSFileSystem:
     Type: AWS::EFS::FileSystem
     Properties:
-      CreationToken: chatbot-postgres-data
       FileSystemTags:
         - Key: Name
           Value: chatbot-postgres-data
@@ -216,9 +219,8 @@ Resources:
         - IpProtocol: tcp
           FromPort: 2049
           ToPort: 2049
-          SourceSecurityGroupId: !Ref ECSSecurityGroup
+          CidrIp: !Ref VpcCidr
 
-  # IAM Roles
   ECSTaskExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -241,25 +243,18 @@ Resources:
                   - secretsmanager:GetSecretValue
                 Resource: !Ref SecretARN
 
-  # ECS Cluster
   ECSCluster:
     Type: AWS::ECS::Cluster
     Properties:
       ClusterName: chatbot-cluster
-      CapacityProviders:
-        - EC2
-      DefaultCapacityProviderStrategy:
-        - CapacityProvider: EC2
-          Weight: 1
 
-  # Auto Scaling Group for EC2 instances
   LaunchTemplate:
     Type: AWS::EC2::LaunchTemplate
     Properties:
       LaunchTemplateName: chatbot-ecs-lt
       LaunchTemplateData:
-        ImageId: ami-0c02fb55956c7d316  # Amazon Linux 2 ECS-optimized
-        InstanceType: t2.micro
+        ImageId: ami-0e6b9772c95871b64
+        InstanceType: t3a.medium
         IamInstanceProfile:
           Arn: !GetAtt EC2InstanceProfile.Arn
         SecurityGroupIds:
@@ -278,13 +273,34 @@ Resources:
       LaunchTemplate:
         LaunchTemplateId: !Ref LaunchTemplate
         Version: !GetAtt LaunchTemplate.LatestVersionNumber
-      MinSize: 1
-      MaxSize: 3
-      DesiredCapacity: 1
+      MinSize: 3
+      MaxSize: 4
+      DesiredCapacity: 3
       Tags:
         - Key: Name
           Value: chatbot-ecs-instance
           PropagateAtLaunch: true
+
+  ECSCapacityProvider:
+    Type: AWS::ECS::CapacityProvider
+    Properties:
+      Name: chatbot-ec2-capacity-provider
+      AutoScalingGroupProvider:
+        AutoScalingGroupArn: !Ref AutoScalingGroup
+        ManagedScaling:
+          Status: ENABLED
+          TargetCapacity: 100
+        ManagedTerminationProtection: DISABLED
+
+  ECSClusterCapacityProviderAssociations:
+    Type: AWS::ECS::ClusterCapacityProviderAssociations
+    Properties:
+      Cluster: !Ref ECSCluster
+      CapacityProviders:
+        - !Ref ECSCapacityProvider
+      DefaultCapacityProviderStrategy:
+        - CapacityProvider: !Ref ECSCapacityProvider
+          Weight: 1
 
   EC2Role:
     Type: AWS::IAM::Role
@@ -323,7 +339,7 @@ Resources:
       ExecutionRoleArn: !GetAtt ECSTaskExecutionRole.Arn
       ContainerDefinitions:
         - Name: postgres
-          Image: postgres:16
+          Image: public.ecr.aws/docker/library/postgres:16
           Memory: 512
           Essential: true
           Environment:
@@ -331,9 +347,8 @@ Resources:
               Value: postgres
             - Name: POSTGRES_USER
               Value: postgres
-          Secrets:
             - Name: POSTGRES_PASSWORD
-              ValueFrom: !Sub "${SecretARN}:POSTGRES_PASSWORD::"
+              Value: postgres
           MountPoints:
             - SourceVolume: postgres-data
               ContainerPath: /var/lib/postgresql/data
@@ -357,7 +372,7 @@ Resources:
       Volumes:
         - Name: postgres-data
           EFSVolumeConfiguration:
-            FileSystemId: !Ref EFSFileSystem
+            FilesystemId: !Ref EFSFileSystem
 
   RedisTaskDefinition:
     Type: AWS::ECS::TaskDefinition
@@ -369,7 +384,7 @@ Resources:
       ExecutionRoleArn: !GetAtt ECSTaskExecutionRole.Arn
       ContainerDefinitions:
         - Name: redis
-          Image: redis:6
+          Image: public.ecr.aws/docker/library/redis:8
           Memory: 256
           Essential: true
           HealthCheck:
@@ -399,16 +414,16 @@ Resources:
       ExecutionRoleArn: !GetAtt ECSTaskExecutionRole.Arn
       ContainerDefinitions:
         - Name: langgraph-api
-          Image: !Sub "${ECRRepositoryURI}/chatbot:latest"
-          Memory: 1024
+          Image: !Sub "${ECRRepositoryURI}/chatbot:${GitCommitHash}"
+          Memory: 512
           Essential: true
           Environment:
             - Name: CONTAINER_PORT
               Value: "8000"
             - Name: REDIS_URI
               Value: redis://redis.chatbot.local:6379
-            - Name: POSTGRES_URI
-              Value: postgres://postgres:password@postgres.chatbot.local:5432/postgres?sslmode=disable
+            - Name: DATABASE_URI
+              Value: postgres://postgres:postgres@postgres.chatbot.local:5432/postgres?sslmode=disable
             - Name: LANGSMITH_TRACING
               Value: "true"
             - Name: LANGSMITH_PROJECT
@@ -420,8 +435,8 @@ Resources:
               ValueFrom: !Sub "${SecretARN}:LANGSMITH_API_KEY::"
             - Name: OPENAI_API_KEY
               ValueFrom: !Sub "${SecretARN}:OPENAI_API_KEY::"
-            - Name: POSTGRES_PASSWORD
-              ValueFrom: !Sub "${SecretARN}:POSTGRES_PASSWORD::"
+            - Name: TAVILY_API_KEY
+              ValueFrom: !Sub "${SecretARN}:TAVILY_API_KEY::"
           HealthCheck:
             Command:
               - CMD-SHELL
@@ -450,8 +465,8 @@ Resources:
       ExecutionRoleArn: !GetAtt ECSTaskExecutionRole.Arn
       ContainerDefinitions:
         - Name: fastapi
-          Image: !Sub "${ECRRepositoryURI}/chatbot-api:latest"
-          Memory: 512
+          Image: !Sub "${ECRRepositoryURI}/chatbot-api:${GitCommitHash}"
+          Memory: 256
           Essential: true
           Environment:
             - Name: CONTAINER_PORT
@@ -488,8 +503,8 @@ Resources:
       ExecutionRoleArn: !GetAtt ECSTaskExecutionRole.Arn
       ContainerDefinitions:
         - Name: nextjs
-          Image: !Sub "${ECRRepositoryURI}/chatbot-ui:latest"
-          Memory: 512
+          Image: !Sub "${ECRRepositoryURI}/chatbot-ui:${GitCommitHash}"
+          Memory: 256
           Essential: true
           Environment:
             - Name: HOSTNAME

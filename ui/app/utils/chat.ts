@@ -1,4 +1,4 @@
-export const apiUrl = 'http://localhost:8080';
+export const apiUrl = process.env.API_URL || 'http://localhost:8080';
 
 export async function fetchThreads() {
   const res = await fetch(`${apiUrl}/chat`);

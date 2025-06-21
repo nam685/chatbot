@@ -2,6 +2,8 @@ name: Continuous Deployment Workflow
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ nlh/test_cd ]
   release:
     types: [published]
 

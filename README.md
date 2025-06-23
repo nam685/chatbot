@@ -13,9 +13,12 @@ Agent architecture: use 2 chat models for separation of concern
 - Helper model to classify if conversation is sensitive or not
 - Main model equiped with tools
 
-Added minimal unit tests
+I also made FastAPI backend and NextJS frontend to interact with chatbot
+Deploy chatbot as standalone container via LangGraph Platform
 
-Prepared for deployment as standalone container via LangGraph Platform
+Deploy to AWS ECS as separate services
+Current deployment's URL: http://chatbot-alb-468353364.eu-central-1.elb.amazonaws.com/
+(I don't keep this URL if I take it down, because I don't pay money for a fixed one))
 
 [![PyPI - Version](https://img.shields.io/pypi/v/chatbot.svg)](https://pypi.org/project/chatbot)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/chatbot.svg)](https://pypi.org/project/chatbot)

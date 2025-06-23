@@ -9,3 +9,4 @@ __pycache__/
 .langgraph_api
 dist
 ui/node_modules
+secrets.json
